@@ -24,14 +24,17 @@ void test(torc::generic::RootSharedPtr &rootPtr);
 void test2(torc::generic::RootSharedPtr &rootPtr);
 
 int main(int argc, char* argv[]) {
-	std::cout<<"\n##################################################################\n"<<std::endl;
 	if(argc < 2 || argc > 3){
+	std::cout<<"\n##################################################################\n"<<std::endl;
 		printf("INVALID ARGUMENTS: ./e2g <fpgenius -fp OPTION> <EDIF FILE>\n");
 			
 		std::cout<<"\n##################################################################\n"<<std::endl;
 		return 0 ;
 	}	
 	try{
+		std::cout<<"\n================================================================================\n";
+		std::cout<<  "[*]\tBegin EDIF to Graph Translation\n";
+		std::cout<<"================================================================================\n";
 		std::string fileName = argv[1];
 		GraphExporter* gExport;
 
@@ -51,20 +54,16 @@ int main(int argc, char* argv[]) {
 		if(index != std::string::npos)
 		 	dir = fileName.substr(0, index+1);
 	
-		std::cout<<"INPUT ADJUSTED EDIF FILE: "<<modifiedEDIFPath<<endl;
-		std::cout<<"OUTPUT DIRECTORY: "<<dir<<std::endl;
+		std::cout<<"[E2G] -- EDIF FILE: "<<modifiedEDIFPath<<endl;
+		std::cout<<"[E2G] -- OUTPUT DIRECTORY: "<<dir<<std::endl;
 	
 		// import the EDIF design
 		string inFileName = modifiedEDIFPath;
 		fstream fileStream(inFileName.c_str());
 		ObjectFactorySharedPtr factoryPtr(new ObjectFactory());
 
-		cout<<"\n******************"<<endl;
-		cout<<"Begin EDIF Import"<<endl;
 		EdifImporter importer(factoryPtr);
 		importer(fileStream, inFileName);
-		cout<<"EDIF Imported!"<<endl;
-		cout<<"******************\n"<<endl;
 
 
 		// look up an instance of interest
@@ -72,13 +71,10 @@ int main(int argc, char* argv[]) {
 
 		//Export design by passing rootPtr of the imported EDIF File
 		gExport->graphExport(dir, rootPtr);
-
-		cout<<"Graph File Exported"<<endl;
 	}
 	catch(exception& e){
-		cout<<"EXCEPTION ON MAIN"<<endl;
+		cout<<"[E2G] -- EXCEPTION ON MAIN"<<endl;
 	}
 
-	std::cout<<"\n##########################################################################\n\n\n"<<std::endl;
 	return 0;
 }

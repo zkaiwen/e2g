@@ -50,8 +50,6 @@ bool GraphExporter::graphExport(std::string outDir, torc::generic::RootSharedPtr
 	std::string graphAssignment = "";
 
 	try {
-		std::cout<<"\n*********************************\n";
-		std::cout<<  "Begin EDIF to Graph Translation\n\n";
 
 		//Get library of interest
 		rootPtr->getLibraries(vLibrary);
@@ -121,7 +119,7 @@ bool GraphExporter::graphExport(std::string outDir, torc::generic::RootSharedPtr
 
 
 			//Get LUT INIT VALUE
-			printf("INST NAME: %s\n", instName.c_str());
+			//printf("INST NAME: %s\n", instName.c_str());
 			PropertySharedPtr initPropertyPtr = inst->getProperty("INIT");
 	
 			if(initPropertyPtr != NULL){
@@ -240,7 +238,7 @@ bool GraphExporter::graphExport(std::string outDir, torc::generic::RootSharedPtr
 		}
 		
 		graph += graphNode + graphAssignment +"}";
-		std::cout << graph << std::endl;
+		//std::cout << graph << std::endl;
 
 		//Output contents to file
 		if(mStream.is_open()){
@@ -248,11 +246,11 @@ bool GraphExporter::graphExport(std::string outDir, torc::generic::RootSharedPtr
 			mStream.close();
 			if(!fp){
 				std::string command = "dot -Tgif " + outDir + cell->getName() + ".dot -o" + outDir + cell->getName() + ".gif";
-				std::cout<<"OUTPUT FILE: "<<outDir<<cell->getName()<<".gif"<<std::endl;
+				std::cout<<"[E2G] -- OUTPUT FILE: "<<outDir<<cell->getName()<<".gif"<<std::endl;
 				system(command.c_str());
 			}
 			else{
-				std::cout<<"OUTPUT FILE: "<<outDir<<cell->getName()<<".dot"<<std::endl;
+				std::cout<<"[E2G] -- OUTPUT FILE: "<<outDir<<cell->getName()<<".dot"<<std::endl;
 			}
 		}
 		
@@ -260,10 +258,9 @@ bool GraphExporter::graphExport(std::string outDir, torc::generic::RootSharedPtr
 
 
 		std::cout << "CONVERSION COMPLETE"<< std::endl;
-		std::cout<<  "*******************\n"<<std::endl;
 
 	} catch (std::exception &e) {
-		std::cout << "EXCEPTION IN exportGraph\n\n" << e.what() << std::endl << std::endl;
+		std::cout << "[E2G] -- EXCEPTION IN exportGraph\n\n" << e.what() << std::endl << std::endl;
 		return false;
 	}
 
@@ -282,7 +279,7 @@ bool GraphExporter::checkComponent(std::string instance, std::string& pinAssignm
 		std::vector<torc::generic::PortSharedPtr> directPortList;
 		//getCellPortDirection(lib, instance, directPortList);
 		Port* directPort = directPortList.at(0).get();
-		std::cout<<instance<<std::endl;
+		//std::cout<<instance<<std::endl;
 		std::string direction = "\toutput ";
 		if(directPort->getDirection() == ePortDirectionOut)
 			direction = "\tinput ";
@@ -327,7 +324,7 @@ std::string GraphExporter::getPorts(View* view){
 	std::string graphInput = "";
 	std::string graphOutput= "";
 	std::string graphAssignment = "";
-	std::cout << "TRAVERSING INPUT OUTPUT PORTS....." << std::endl;
+	//std::cout << "TRAVERSING INPUT OUTPUT PORTS....." << std::endl;
 	
 	//Go through each port of the cell and determine if it's input or output
 	for (unsigned int l = 0; l < vPort.size(); l++) {
@@ -344,7 +341,7 @@ std::string GraphExporter::getPorts(View* view){
 		}
 		else if (pdirect == ePortDirectionIn){
 			graphInput += "<" + port->getName() + "> " + port->getName() + "|";
-			std::cout<<"GRAPH INPUT NAME: "<<graphInput<<std::endl;
+			//std::cout<<"GRAPH INPUT NAME: "<<graphInput<<std::endl;
 		}
 
 
@@ -352,7 +349,7 @@ std::string GraphExporter::getPorts(View* view){
 		//Go through net to find the specific portbit 
 		for(unsigned int p = 0; p < connectedNet.size(); p++){
 			Net* net = connectedNet.at(p).get();
-			std::cout<<"NET NAME: "<<net->getName()<<std::endl;
+			//std::cout<<"NET NAME: "<<net->getName()<<std::endl;
 				
 			std::string netLength = "";
 			std::string iPrim = "";
@@ -465,7 +462,7 @@ std::string GraphExporter::getSimpleName(std::string name, std::string simpleNam
 	std::stringstream ss;
 	ss<<simpleName<<"__"<<count<<"__"<<name;
 	simpName[name] = ss.str();
-	printf("OLD: %s\tNEW: %s\n", name.c_str(),  ss.str().c_str());
+	//printf("OLD: %s\tNEW: %s\n", name.c_str(),  ss.str().c_str());
 
 	return ss.str();
 }
