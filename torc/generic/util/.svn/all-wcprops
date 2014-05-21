@@ -1,0 +1,71 @@
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/torc/!svn/ver/759/trunk/src/torc/generic/util
+END
+Error.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/torc/!svn/ver/759/trunk/src/torc/generic/util/Error.hpp
+END
+Log.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/torc/!svn/ver/759/trunk/src/torc/generic/util/Log.cpp
+END
+MessageTable.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/torc/!svn/ver/759/trunk/src/torc/generic/util/MessageTable.hpp
+END
+Message.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/torc/!svn/ver/759/trunk/src/torc/generic/util/Message.cpp
+END
+MessageSeverity.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/torc/!svn/ver/759/trunk/src/torc/generic/util/MessageSeverity.hpp
+END
+Log.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/torc/!svn/ver/759/trunk/src/torc/generic/util/Log.hpp
+END
+MessageId.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/torc/!svn/ver/759/trunk/src/torc/generic/util/MessageId.hpp
+END
+Error.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/torc/!svn/ver/759/trunk/src/torc/generic/util/Error.cpp
+END
+Message.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/torc/!svn/ver/759/trunk/src/torc/generic/util/Message.hpp
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/torc/!svn/ver/446/trunk/src/torc/generic/util/Makefile
+END
+MessageTable.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/torc/!svn/ver/759/trunk/src/torc/generic/util/MessageTable.cpp
+END

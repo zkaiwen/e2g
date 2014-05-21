@@ -1,0 +1,27 @@
+README
+e2v.exe make
+
+Program uses Torc framework. Source needs Torc dependencies to be installed. 
+
+The folder contains the necessary torc dependent source in order to make the program.
+
+The Makefiles expect Boost to be installed in /usr/local/include/boost-1_42. Need to have boost libraries 1.42
+
+Please also make sure that the boost libraries are in /usr/lib
+Ex: 
+/usr/lib/lboost_filesystem.so.1.42*
+/usr/lib/lboost_regex.so.1.42*
+/usr/lib/lboost_signals.so.1.42*
+/usr/lib/lboost_system.so.1.42*
+/usr/lib/lboost_thread.so.1.42*
+
+Once dependencies have been met, you can type make to make the program. 
+
+Source files are located in
+./torc/example/e2v.cpp
+./torc/generic/VerilogExporter.cpp
+./torc/generic/VerilogExporter.hpp
+
+
+kaiwen@vt.edu
+
