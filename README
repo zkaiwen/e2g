@@ -1,4 +1,7 @@
 README
+Program takes an EDIF File and converts it into a custom graph format that is easily read into a 
+program using C/C++ that does not parse files well
+
 e2v.exe make
 
 Program uses Torc framework. Source needs Torc dependencies to be installed. 

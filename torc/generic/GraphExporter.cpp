@@ -123,10 +123,11 @@ bool GraphExporter::graphExport(std::string outDir, torc::generic::RootSharedPtr
 			PropertySharedPtr initPropertyPtr = inst->getProperty("INIT");
 	
 			if(initPropertyPtr != NULL){
-				std::string property = initPropertyPtr->getValue().get<Value::String>();
-				//graphNode += "\t" + instName + "[label=\"" + property + "\"];\n";
-				graphNode += "\t" + instName + "[lut=$" + property + "$];\n";
-
+				if(instPrimitive.find("LUT") != std::string::npos){
+					std::string property = initPropertyPtr->getValue().get<Value::String>();
+					//graphNode += "\t" + instName + "[label=\"" + property + "\"];\n";
+					graphNode += "\t" + instName + "[lut=$" + property + "$];\n";
+				}
 			}
 	
 
