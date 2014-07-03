@@ -66,7 +66,7 @@ TEST_OBJECTS = \
 
 # make everything
 
-all: e2v e2g
+all: e2v e2g ndf2cnl
 
 
 
@@ -79,7 +79,6 @@ e2v: torc
 				-o $@ \
 				$
 
-
 e2g: torc 
 	$(CC) \
 				$(REAL_OBJECTS) \
@@ -87,6 +86,15 @@ e2g: torc
 				$(LDFLAGS) \
 				-o $@ \
 				$
+
+ndf2cnl: torc 
+	$(CC) \
+				$(REAL_OBJECTS) \
+				torc/examples/ndf2cnl.o \
+				$(LDFLAGS) \
+				-o $@ \
+				$
+
 # make the torc subdirectory
 torc:
 	make -C torc

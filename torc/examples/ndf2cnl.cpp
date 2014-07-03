@@ -20,7 +20,7 @@ using namespace std;
 using namespace torc::generic;
 
 bool translate(std::string outDir, RootSharedPtr &rootPtr);
-bool exportCell(std::string outDir, Cell* module);
+void exportCell(std::string outDir, Cell* module);
 
 int main(int argc, char* argv[]) {
 	if(argc != 2){
@@ -36,7 +36,6 @@ int main(int argc, char* argv[]) {
 		std::cout<<"============================================================================\n";
 
 		std::string fileName = argv[1];
-		std::string modifiedEDIFPath = fileName;
 
 		//OUTPUT FILES WE ARE WORKING WITH
 		std::string dir = "";
@@ -45,19 +44,13 @@ int main(int argc, char* argv[]) {
 		if(index != std::string::npos)
 			dir = fileName.substr(0, index+1);
 
-		std::cout<<"[NDF2CNL] -- EDIF FILE: "<<modifiedEDIFPath<<endl;
-		std::cout<<"[NDF2CNL] -- OUTPUT DIRECTORY: "<<dir<<std::endl;
+		std::cout<<"[NDF2CNL] -- EDIF FILE: "<<fileName<<endl;
 
 		// import the EDIF design
-		string inFileName = modifiedEDIFPath;
-		fstream fileStream(inFileName.c_str());
+		fstream fileStream(fileName.c_str());
 		ObjectFactorySharedPtr factoryPtr(new ObjectFactory());
-
 		EdifImporter importer(factoryPtr);
-		importer(fileStream, inFileName);
-
-
-		// look up an instance of interest
+		importer(fileStream, fileName);
 		RootSharedPtr rootPtr = importer.getRootPtr();
 
 		//Export design by passing rootPtr of the imported EDIF File
@@ -76,12 +69,10 @@ int main(int argc, char* argv[]) {
 
 
 bool translate(std::string outDir, torc::generic::RootSharedPtr &rootPtr) {
-	printf("[Translate] -- Translating EDIF File...\n");
+	//printf("[Translate] -- Translating EDIF File...\n");
 	//Initial Declarations
 	std::vector<torc::generic::LibrarySharedPtr, std::allocator<LibrarySharedPtr> > vLibrary;
 	
-	
-
 	try {
 		//Get Current Design
 		std::vector<DesignSharedPtr> designList;
@@ -89,31 +80,30 @@ bool translate(std::string outDir, torc::generic::RootSharedPtr &rootPtr) {
 
 		//Make sure only one design (May Change)
 		assert(designList.size() == 1);
-		std::cout<<"Number of Designs: "<<designList.size()<<std::endl;
+		//std::cout<<"Number of Designs: "<<designList.size()<<std::endl;
 
 		//Get the library
 		Design* topDesign = designList.at(0).get();
 		Library* library = rootPtr->findLibrary(topDesign->getLibraryRefName()).get();
 		
+
+		//Get the cells in the library
 		std::vector<torc::generic::CellSharedPtr> cells;
 		library->getCells(cells);
 
-
-		//Get cell of interest
+		printf("[NDF2CNL] -- Possible submodules: %d\n", (int)cells.size()-1);
 		for(unsigned int i = 0; i < cells.size(); i++){
 			//Get the top cell
 			Cell* cell = cells[i].get();
-
 			std::string filepath = outDir + cell->getName();
-			if(cell->getName() != topDesign->getCellRefName()){
-				std::cout<<"Cell Name: "<<cell->getName()<<"\n";
+
+			//Note the submodules
+			if(cell->getName() != topDesign->getCellRefName())
 				filepath += "_cell";
-			}
-			else
-				std::cout<<"Top Design Name: "<<cell->getName()<<"\n";
 
 			filepath+= ".cnl";
 
+			//export each cell
 			exportCell(filepath, cell);
 		}
 
@@ -121,7 +111,7 @@ bool translate(std::string outDir, torc::generic::RootSharedPtr &rootPtr) {
 		std::cout << "CONVERSION COMPLETE"<< std::endl;
 
 	} catch (std::exception &e) {
-		std::cout << "[E2G] -- EXCEPTION IN exportGraph\n\n" << e.what() << std::endl << std::endl;
+		std::cout << "[NDF2CNL] -- EXCEPTION IN exportGraph\n\n" << e.what() << std::endl << std::endl;
 		return false;
 	}
 
@@ -129,8 +119,8 @@ bool translate(std::string outDir, torc::generic::RootSharedPtr &rootPtr) {
 }
 
 
-bool exportCell(std::string filepath, Cell* module){
-		std::cout<<"Exporting Cell:  "<<module->getName()<<"\n";
+void exportCell(std::string filepath, Cell* module){
+		std::cout<<"[NDF2CNL] -- Exporting Cell: "<<filepath<<"\n";
 		std::vector<torc::generic::ViewSharedPtr> vViews;
 		module->getViews(vViews);
 		View* view = vViews.at(0).get();
@@ -155,8 +145,8 @@ bool exportCell(std::string filepath, Cell* module){
 		std::map<std::string, int> portOutIDMap;
 		std::map<std::string, int> instanceIDMap;
 
-		printf("\nParsing Ports...\n");
 		int vID = 0;
+		//Parsing ports to the module
 		for (unsigned int i = 0; i < ports.size(); i++) {
 			Port* port = ports[i].get();
 			if(port->getDirection() == ePortDirectionIn){
@@ -164,19 +154,19 @@ bool exportCell(std::string filepath, Cell* module){
 				portInIDMap[port->getName()] = vID;
 				vID++;
 
-				std::cout<<"Port:  "<< port->getName()<< "\tDIR: Input\n";
+				//std::cout<<"Port:  "<< port->getName()<< "\tDIR: Input\n";
 			}
 			else if(port->getDirection() == ePortDirectionOut){
 				cnlOutputPort<<port->getName()<<" "<<vID<<"  ";
 				portOutIDMap[port->getName()] = vID;
 				vID++;
 
-				std::cout<<"Port:  "<< port->getName()<< "\tDIR: Output\n";
+				//std::cout<<"Port:  "<< port->getName()<< "\tDIR: Output\n";
 			}
 		}
 		
 		
-		printf("\nParsing Instances...\n");
+		//Parsing the components of the module
 		for (unsigned int i = 0; i < instances.size(); i++) {
 			Instance* instance= instances[i].get();
 			std::string type = instance->getMaster()->getParent()->getName();
@@ -184,7 +174,7 @@ bool exportCell(std::string filepath, Cell* module){
 			std::string lutFunction = "";
 			instanceIDMap[name] = vID;
 
-
+			//Record the function of the LUT
 			if(type.find("LUT") != std::string::npos){
 				PropertySharedPtr property= instance->getProperty("INIT");
 	
@@ -196,10 +186,10 @@ bool exportCell(std::string filepath, Cell* module){
 			cnlInstance<<vID<<"  "<<type<<"  "<<name<<"  "<<lutFunction<<"\n";
 			vID++;
 
-			std::cout<<"Instance:  "<< name << "\tType: "<< type <<"\n";
+			//std::cout<<"Instance:  "<< name << "\tType: "<< type <<"\n";
 		}
 		
-		printf("\nParsing Nets...\n");
+		//Parsing nets within module
 		for (unsigned int i = 0; i < nets.size(); i++) {
 			Net* net= nets[i].get();
 			std::string name = net->getName();
@@ -209,7 +199,6 @@ bool exportCell(std::string filepath, Cell* module){
 			net->getConnectedPortRefs(portRefs);
 			net->getConnectedPorts(netports);
 					
-			std::cout<<"Net:  "<<name <<"\n";
 			cnlNet<<name<<"  ";
 			std::stringstream sink;
 			bool sourceFound = false;
@@ -222,7 +211,7 @@ bool exportCell(std::string filepath, Cell* module){
 				CompositionType comType = portref->getCompositionType();
 				assert(comType != eCompositionTypeVectorBit);
 
-				std::cout<<"\tPortRef:  "<<portref->getName()<<" Instance: "<<portref->getParent()->getName()<<"\n";
+				//std::cout<<"\tPortRef:  "<<portref->getName()<<" Instance: "<<portref->getParent()->getName()<<"\n";
 				std::string instanceRef = portref->getParent()->getName();
 				if(portref->getMaster()->getDirection() == ePortDirectionIn)
 					sink<<portref->getName()<<" "<<instanceIDMap[instanceRef]<<"   ";
@@ -240,7 +229,7 @@ bool exportCell(std::string filepath, Cell* module){
 				CompositionType comType = port->getCompositionType();
 				assert(comType != eCompositionTypeVectorBit);
 
-				std::cout<<"\tPort:  "<<port->getName()<<"\n";
+				//std::cout<<"\tPort:  "<<port->getName()<<"\n";
 				if(port->getDirection() == ePortDirectionIn){
 					assert(sourceFound == false);
 					sourceFound = true;
@@ -258,10 +247,8 @@ bool exportCell(std::string filepath, Cell* module){
 		}
 
 
-		printf("\nCreating cnl file...\n");
-
+		//Export the CNL file from data collected
 		std::ofstream fs(filepath.c_str());
-
 		fs<<instances.size()+ portInIDMap.size() + portOutIDMap.size()<<" "<<nets.size()<<"\n";
 
 		std::map<std::string, int>::iterator pID_it;
@@ -281,9 +268,4 @@ bool exportCell(std::string filepath, Cell* module){
 		fs<<cnlInstance.str();
 		fs<<cnlNet.str();
 		fs<<"\nEND";
-
-
-		
-
-
 }

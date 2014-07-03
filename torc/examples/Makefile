@@ -30,6 +30,7 @@ CCFLAGS = \
 OBJS = \
 				e2v.o \
 				e2g.o \
+				ndf2cnl.o \
 				$
 
 # dependencies
