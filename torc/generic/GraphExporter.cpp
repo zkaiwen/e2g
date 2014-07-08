@@ -39,7 +39,7 @@ GraphExporter::~GraphExporter() {
 
 
 
-bool GraphExporter::graphExport(std::string outDir, torc::generic::RootSharedPtr &rootPtr) {
+bool GraphExporter::graphExport(std::string outDir, std::string filename,  torc::generic::RootSharedPtr &rootPtr) {
 	//Initial Declarations
 	std::vector<torc::generic::LibrarySharedPtr, std::allocator<LibrarySharedPtr> > vLibrary;
 	
@@ -76,7 +76,7 @@ bool GraphExporter::graphExport(std::string outDir, torc::generic::RootSharedPtr
 
 		if(vInst.size() > 0){
 			//Get the module name from cell
-			oFile = outDir + cell->getName() + ".dot";
+			oFile = outDir + filename + ".dot";
 			mStream.open(oFile.c_str(), std::ios::out);
 			graph = "digraph edif {\n";
 			if(!fp)
@@ -251,7 +251,7 @@ bool GraphExporter::graphExport(std::string outDir, torc::generic::RootSharedPtr
 				system(command.c_str());
 			}
 			else{
-				std::cout<<"[E2G] -- OUTPUT FILE: "<<outDir<<cell->getName()<<".dot"<<std::endl;
+				std::cout<<"[E2G] -- OUTPUT FILE: "<<oFile<<std::endl;
 			}
 		}
 		

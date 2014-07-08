@@ -58,7 +58,7 @@ class GraphExporter {
 		*		@param	rootPtr	Root Pointer to EDIF Object
 		*		@return	Returns true if Graph file is sucessfully generated
 		*****************************************************************/
-		bool graphExport(std::string outDir, torc::generic::RootSharedPtr &rootPtr);
+		bool graphExport(std::string outDir, std::string, torc::generic::RootSharedPtr &rootPtr);
 
 
 		/*****************************************************************

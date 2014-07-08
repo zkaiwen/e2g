@@ -55,7 +55,12 @@ int main(int argc, char* argv[]) {
 		 	dir = fileName.substr(0, index+1);
 	
 		std::cout<<"[E2G] -- EDIF FILE: "<<modifiedEDIFPath<<endl;
-		std::cout<<"[E2G] -- OUTPUT DIRECTORY: "<<dir<<std::endl;
+
+		//Grab File Name
+		size_t startPos = modifiedEDIFPath.find_last_of('/')+1;
+		size_t endPos = modifiedEDIFPath.find_last_of('.');
+		std::string filename = modifiedEDIFPath.substr(startPos, endPos-startPos);
+
 	
 		// import the EDIF design
 		string inFileName = modifiedEDIFPath;
@@ -70,7 +75,7 @@ int main(int argc, char* argv[]) {
 		RootSharedPtr rootPtr = importer.getRootPtr();
 
 		//Export design by passing rootPtr of the imported EDIF File
-		gExport->graphExport(dir, rootPtr);
+		gExport->graphExport(dir, filename, rootPtr);
 	}
 	catch(exception& e){
 		cout<<"[E2G] -- EXCEPTION ON MAIN"<<endl;
