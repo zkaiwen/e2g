@@ -413,8 +413,19 @@ std::string GraphExporter::getPorts(View* view){
 					else
 						//Skip output ports (FEEDBACK LOOP)
 						if(fp){
+							/*
+							//TODO: Have output as an actual node
+							std::string portOutName;
 							//dotGraph = "\t" + iName + ":" + portref->getName() + " -> " + port->getName();
-							continue;
+							if(simpName[net->getName()] == "")
+								portOutName = getSimpleName(net->getName(), "OUT"); 
+							else
+								portOutName = simpName[net->getName()];
+							
+							dotGraph = "\t" + iName +  portref->getName() + " -> "  + 
+								portOutName + "I";
+								*/
+								continue;
 						}
 						else
 							dotGraph = "\t" + iName + ":" + portref->getName() + "->" + port->getName();
