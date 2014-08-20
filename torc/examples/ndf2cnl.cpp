@@ -137,33 +137,52 @@ void exportCell(std::string filepath, Cell* module){
 		//Go through each Instance and write out the instantiation of each module
 		std::stringstream cnlInputPort;
 		std::stringstream cnlOutputPort;
-		std::stringstream cnlInstance;
-		std::stringstream cnlNet;
 
 		//Name, VID
-		std::map<std::string, int> portInIDMap;
-		std::map<std::string, int> portOutIDMap;
 		std::map<std::string, int> instanceIDMap;
 
+		//Instance name, LUT function
+		std::map<std::string, std::string> instanceLUTMap;
+
+		std::vector<std::string> instanceNameMap;
+		std::vector<std::string> instanceTypeMap;
+		std::vector<std::vector<int> > instanceInputMap;
+		std::vector<std::vector<std::string> > instanceInputPortMap;
+		std::vector<std::vector<int> > instanceOutputMap;
+		std::vector<std::vector<std::string> > instanceOutputPortMap;
+
+
 		int vID = 0;
+		int inputPortSize = 0;
 		//Parsing ports to the module
 		for (unsigned int i = 0; i < ports.size(); i++) {
 			Port* port = ports[i].get();
 			if(port->getDirection() == ePortDirectionIn){
-				cnlInputPort<<port->getName()<<" "<<vID<<"  ";
-				portInIDMap[port->getName()] = vID;
+				cnlInputPort<<vID<<"  "<<port->getName()<<"  ";
+				instanceIDMap[port->getName()] = vID;
+				instanceNameMap.push_back(port->getName());
+				instanceTypeMap.push_back("INPUT");
 				vID++;
+				inputPortSize++;
 
-				//std::cout<<"Port:  "<< port->getName()<< "\tDIR: Input\n";
+				std::cout<<"Port:  "<< port->getName()<< "\tDIR: Input\n";
 			}
+			/*
 			else if(port->getDirection() == ePortDirectionOut){
 				cnlOutputPort<<port->getName()<<" "<<vID<<"  ";
 				portOutIDMap[port->getName()] = vID;
 				vID++;
 
-				//std::cout<<"Port:  "<< port->getName()<< "\tDIR: Output\n";
+				std::cout<<"Port:  "<< port->getName()<< "\tDIR: Output\n";
 			}
+			*/
 		}
+	
+		int sizeCircuit = ports.size() + instances.size();
+		instanceInputMap.resize(sizeCircuit);
+		instanceInputPortMap.resize(sizeCircuit);
+		instanceOutputMap.resize(sizeCircuit);
+		instanceOutputPortMap.resize(sizeCircuit);
 		
 		
 		//Parsing the components of the module
@@ -173,6 +192,8 @@ void exportCell(std::string filepath, Cell* module){
 			std::string name = instance->getName();
 			std::string lutFunction = "";
 			instanceIDMap[name] = vID;
+			instanceNameMap.push_back(name);
+			instanceTypeMap.push_back(type);
 
 			//Record the function of the LUT
 			if(type.find("LUT") != std::string::npos){
@@ -180,13 +201,12 @@ void exportCell(std::string filepath, Cell* module){
 	
 				if(property != NULL){
 					lutFunction = property->getValue().get<Value::String>();
+					instanceLUTMap[name] = lutFunction;
 				}
 			}
 			
-			cnlInstance<<vID<<"  "<<type<<"  "<<name<<"  "<<lutFunction<<"\n";
 			vID++;
-
-			//std::cout<<"Instance:  "<< name << "\tType: "<< type <<"\n";
+			std::cout<<"Instance:  "<< name << "\tType: "<< type <<"\n";
 		}
 		
 		//Parsing nets within module
@@ -199,9 +219,12 @@ void exportCell(std::string filepath, Cell* module){
 			net->getConnectedPortRefs(portRefs);
 			net->getConnectedPorts(netports);
 					
-			cnlNet<<name<<"  ";
-			std::stringstream sink;
+			std::vector<std::string> sink;
+			std::vector<std::string> sinkPort;
+			std::string source;
+			std::string sourcePort;
 			bool sourceFound = false;
+			bool isPortSource = false;
 
 			//Find the port that is connected to the instance
 			for(unsigned k = 0; k < portRefs.size(); k++){
@@ -211,14 +234,19 @@ void exportCell(std::string filepath, Cell* module){
 				CompositionType comType = portref->getCompositionType();
 				assert(comType != eCompositionTypeVectorBit);
 
-				//std::cout<<"\tPortRef:  "<<portref->getName()<<" Instance: "<<portref->getParent()->getName()<<"\n";
+				std::cout<<"\tPortRef:  "<<portref->getName()<<" Instance: "<<portref->getParent()->getName()<<"\n";
 				std::string instanceRef = portref->getParent()->getName();
-				if(portref->getMaster()->getDirection() == ePortDirectionIn)
-					sink<<portref->getName()<<" "<<instanceIDMap[instanceRef]<<"   ";
+				if(portref->getMaster()->getDirection() == ePortDirectionIn){
+					//sink<<portref->getName()<<" "<<instanceIDMap[instanceRef]<<"   ";
+					sink.push_back(instanceRef);
+					sinkPort.push_back(portref->getName());
+				}
 				else{
 					assert(sourceFound == false);
 					sourceFound = true;
-					cnlNet<<portref->getName()<<" "<<instanceIDMap[instanceRef]<<"   ";	
+					source = instanceRef;
+					sourcePort = portref->getName();
+					//cnlNet<<portref->getName()<<" "<<instanceIDMap[instanceRef]<<"   ";	
 				}
 			}
 
@@ -229,43 +257,125 @@ void exportCell(std::string filepath, Cell* module){
 				CompositionType comType = port->getCompositionType();
 				assert(comType != eCompositionTypeVectorBit);
 
-				//std::cout<<"\tPort:  "<<port->getName()<<"\n";
+				std::cout<<"\tPort:  "<<port->getName()<<"\n";
 				if(port->getDirection() == ePortDirectionIn){
 					assert(sourceFound == false);
 					sourceFound = true;
-					cnlNet<<port->getName()<<" "<<portInIDMap[port->getName()]<<"   ";
+					source = port->getName();
+					sourcePort = "O";
+					isPortSource = true;
+					//cnlNet<<port->getName()<<" "<<portInIDMap[port->getName()]<<"   ";
 				}
 				else if(port->getDirection() == ePortDirectionOut){
-					sink<<port->getName()<<" "<<portOutIDMap[port->getName()]<<"   ";
+					//sink<<port->getName()<<" "<<portOutIDMap[port->getName()]<<"   ";
+					//TODO: IF YOU WANT OUTPUT PORTS
 				}
 			}
+
+
+		//Add connections to instances
+			int sourceID = instanceIDMap[source];
+			for(unsigned k = 0; k < sink.size(); k++){
+				int sinkID = instanceIDMap[sink[k]];
+				//Connect input to output node
+				std::cout<<"Adding "<<instanceIDMap[source]<<" to sink in "<<sink[k]<<"\n";
+				instanceInputMap[sinkID].push_back(sourceID);
+				instanceInputPortMap[sinkID].push_back(sinkPort[k]);
+
+				//Connect output to input node
+				std::cout<<"Adding "<<instanceIDMap[source]<<" to source out  "<<instanceIDMap[sink[k]]<<"\n";
+				instanceOutputMap[sourceID].push_back(sinkID);
+				instanceOutputPortMap[sourceID].push_back(sourcePort);
+			}
+			printf("done\n");
 			
 
-			cnlNet<<sink.str() << "\n";
-
-
+			//cnlNet<<sink.str() << "\n";
 		}
 
 
 		//Export the CNL file from data collected
 		std::ofstream fs(filepath.c_str());
-		fs<<instances.size()+ portInIDMap.size() + portOutIDMap.size()<<" "<<nets.size()<<"\n";
+		//fs<<instances.size()+ portInIDMap.size() + portOutIDMap.size()<<" "<<nets.size()<<"\n";
+		std::cout<<vID<<"\n";
 
 		std::map<std::string, int>::iterator pID_it;
 		std::map<std::string, int>::iterator iID_it;
-		fs<<portInIDMap.size()<<"  ";
-		fs<<cnlInputPort.str()<<"\n";
-		fs<<portOutIDMap.size()<<"  ";
-		fs<<cnlOutputPort.str()<<"\n\n";
-		
-		for(pID_it = portInIDMap.begin(); pID_it != portInIDMap.end(); pID_it++){
-			fs<<pID_it->second<<"  INPUT "<<pID_it->first<<"\n";
+		std::cout<<inputPortSize<<"  ";
+		//std::cout<<cnlInputPort.str()<<"\n";
+
+		int i = 0;
+		for(i = 0; i < vID; i++){
+			if(instanceTypeMap[i].find("INPUT") != std::string::npos){
+				std::cout<<i<<" "<<instanceNameMap[i]<<"  ";
+			}
+			else
+				break;
+
 		}
+/*
+		for(iID_it = instanceIDMap.begin(); iID_it != instanceIDMap.end(); iID_it++){
+			if(instanceTypeMap[iID_it->first].find("INPUT") != std::string::npos){
+				std::cout<<iID_it->second<<" "<<iID_it->first<<"  ";
+			}
+		}
+		*/
+
+		printf("\n");
+		/*
 		for(pID_it = portOutIDMap.begin(); pID_it != portOutIDMap.end(); pID_it++){
 			fs<<pID_it->second<<"  OUTPUT "<<pID_it->first<<"\n";
 		}
+		*/
 		
-		fs<<cnlInstance.str();
-		fs<<cnlNet.str();
+		//fs<<cnlInstance.str();
+		//fs<<cnlNet.str();
+		/*
+		for(iID_it = instanceIDMap.begin(); iID_it != instanceIDMap.end(); iID_it++){
+			std::cout<<iID_it->second<< "  "<<instanceTypeMap[iID_it->first]<<"  "<<iID_it->first<<"  ";
+			std::cout<<instanceInputMap[iID_it->first].size()<<"  ";
+			for(unsigned int i = 0; i < instanceInputMap[iID_it->first].size(); i++){
+				std::cout<<instanceInputMap[iID_it->first][i]<<" ";
+				std::cout<<instanceInputPortMap[iID_it->first][i]<<" ";
+			}
+			std::cout<<instanceOutputMap[iID_it->first].size()<<"  ";
+			for(unsigned int i = 0; i < instanceOutputMap[iID_it->first].size(); i++){
+				std::cout<<instanceOutputMap[iID_it->first][i]<<" ";
+				std::cout<<instanceOutputPortMap[iID_it->first][i]<<" ";
+			}
+			if(instanceTypeMap[iID_it->first].find("LUT") != std::string::npos){
+				std::cout<<instanceLUTMap[iID_it->first]<<"\n";
+			}
+			else
+				std::cout<<"\n";
+		}
+		*/
+		for(i = 0; i < vID; i++){
+			std::cout<<i<<"  "<<instanceTypeMap[i]<<"  "<<instanceNameMap[i]<<"  ";
+			std::cout<<instanceInputMap[i].size()<<"  ";
+			for(unsigned int k = 0; k < instanceInputMap[i].size(); k++){
+				std::cout<<instanceInputMap[i][k]<<" ";
+				std::cout<<instanceInputPortMap[i][k]<<" ";
+			}
+			std::cout<<instanceOutputMap[i].size()<<"  ";
+			for(unsigned int k = 0; k < instanceOutputMap[i].size(); k++){
+				std::cout<<instanceOutputMap[i][k]<<" ";
+				std::cout<<instanceOutputPortMap[i][k]<<" ";
+			}
+			if(instanceTypeMap[i].find("LUT") != std::string::npos){
+				std::cout<<instanceLUTMap[instanceNameMap[i]]<<"\n";
+			}
+			else
+				std::cout<<"\n";
+
+		}
+
+		
+
+
+
 		fs<<"\nEND";
 }
+
+
+

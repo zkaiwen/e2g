@@ -344,6 +344,8 @@ std::string GraphExporter::getPorts(View* view){
 			graphInput += "<" + port->getName() + "> " + port->getName() + "|";
 			//std::cout<<"GRAPH INPUT NAME: "<<graphInput<<std::endl;
 		}
+		else
+			printf(" * Unknown Port Direction\n");
 
 
 		std::list<std::string> prevNet;
@@ -413,7 +415,6 @@ std::string GraphExporter::getPorts(View* view){
 					else
 						//Skip output ports (FEEDBACK LOOP)
 						if(fp){
-							/*
 							//TODO: Have output as an actual node
 							std::string portOutName;
 							//dotGraph = "\t" + iName + ":" + portref->getName() + " -> " + port->getName();
@@ -422,10 +423,9 @@ std::string GraphExporter::getPorts(View* view){
 							else
 								portOutName = simpName[net->getName()];
 							
-							dotGraph = "\t" + iName +  portref->getName() + " -> "  + 
-								portOutName + "I";
-								*/
-								continue;
+							dotGraph = "\t" + iName + ":" + portref->getName() + " -> "  + 
+								portOutName + ":I";
+								//continue;
 						}
 						else
 							dotGraph = "\t" + iName + ":" + portref->getName() + "->" + port->getName();
@@ -466,13 +466,11 @@ std::string GraphExporter::getPorts(View* view){
 
 
 std::string GraphExporter::getSimpleName(std::string name, std::string simpleName){
-	if(simpleName.rfind("__") != std::string::npos)
-		simpleName = simpleName.substr(0, simpleName.rfind("__"));
 	int count = instNum[simpleName];
 	instNum[simpleName] = ++count;
 								
 	std::stringstream ss;
-	ss<<simpleName<<"__"<<count<<"__"<<name;
+	ss<<simpleName<<"---"<<count<<"---"<<name;
 	simpName[name] = ss.str();
 	//printf("OLD: %s\tNEW: %s\n", name.c_str(),  ss.str().c_str());
 
