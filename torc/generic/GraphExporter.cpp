@@ -364,6 +364,12 @@ std::string GraphExporter::getPorts(View* view){
 
 			//Find the port that is connected to the instance
 			for(unsigned q = 0; q < refTemp.size(); q++){
+				//Output only has one input
+				if(isOutput){
+					if(portRef->getName() == port->getName())
+						continue;
+				}
+
 				PortReference* portref = refTemp.at(q).get();
 				CompositionType comType = portref->getCompositionType();
 				std::string iName = "";
@@ -397,10 +403,10 @@ std::string GraphExporter::getPorts(View* view){
 						std::string portInName;
 						if(fp){
 							
-							if(simpName[net->getName()] == "")
-								portInName = getSimpleName(net->getName(), "IN"); 
+							if(simpName[port->getName()] == "")
+								portInName = getSimpleName(port->getName(), "IN"); 
 							else
-								portInName = simpName[net->getName()];
+								portInName = simpName[port->getName()];
 							
 							dotGraph = "\t" + portInName +  ":O -> " + 
 								iName + ":" + portref->getName();
@@ -418,10 +424,10 @@ std::string GraphExporter::getPorts(View* view){
 							//TODO: Have output as an actual node
 							std::string portOutName;
 							//dotGraph = "\t" + iName + ":" + portref->getName() + " -> " + port->getName();
-							if(simpName[net->getName()] == "")
-								portOutName = getSimpleName(net->getName(), "OUT"); 
+							if(simpName[port->getName()] == "")
+								portOutName = getSimpleName(port->getName(), "OUT"); 
 							else
-								portOutName = simpName[net->getName()];
+								portOutName = simpName[port->getName()];
 							
 							dotGraph = "\t" + iName + ":" + portref->getName() + " -> "  + 
 								portOutName + ":I";
