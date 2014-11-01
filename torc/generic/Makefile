@@ -32,6 +32,8 @@ CCFLAGS = \
 OBJS = \
 				VerilogExporter.o \
 				GraphExporter.o \
+				graph.o \
+				vertex.o \
 				$
 
 # dependencies

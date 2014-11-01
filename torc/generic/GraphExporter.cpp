@@ -21,6 +21,9 @@ namespace generic {
 GraphExporter::GraphExporter(std::string option) {
 	if(option == "-fp")
 		fp = true;
+
+	ckt = new Graph("circuit");
+	lastVID = 0; 
 }
 
 
@@ -33,6 +36,7 @@ GraphExporter::GraphExporter() {
 
 GraphExporter::~GraphExporter() {
 	// TODO Auto-generated destructor stub
+	delete ckt;
 }
 
 
@@ -45,6 +49,7 @@ bool GraphExporter::graphExport(std::string outDir, std::string filename,  torc:
 	
 	
 	std::string oFile = "";
+	std::string gFile = "";
 	std::string graph = "";
 	std::string graphNode = "";
 	std::string graphAssignment = "";
@@ -77,7 +82,8 @@ bool GraphExporter::graphExport(std::string outDir, std::string filename,  torc:
 		if(vInst.size() > 0){
 			//Get the module name from cell
 			oFile = outDir + filename + ".dot";
-			mStream.open(oFile.c_str(), std::ios::out);
+			gFile = outDir + filename + ".g";
+			//mStream.open(oFile.c_str(), std::ios::out);
 			graph = "digraph edif {\n";
 			if(!fp)
 				graph += "\trankdir=LR;\n\tedge[weight=10]\n";
@@ -106,10 +112,12 @@ bool GraphExporter::graphExport(std::string outDir, std::string filename,  torc:
 			if(fp){
 				if(instPrimitive == "VCC" || instPrimitive == "GND")
 					instName = instPrimitive;
+					/*
 				else if(simpName[instName] == "")
 					instName = getSimpleName(instName, instPrimitive);
 				else
 					instName = simpName[instName];
+					*/
 			}
 	
 	
@@ -126,7 +134,8 @@ bool GraphExporter::graphExport(std::string outDir, std::string filename,  torc:
 				if(instPrimitive.find("LUT") != std::string::npos){
 					std::string property = initPropertyPtr->getValue().get<Value::String>();
 					//graphNode += "\t" + instName + "[label=\"" + property + "\"];\n";
-					graphNode += "\t" + instName + "[lut=$" + property + "$];\n";
+					//graphNode += "\t" + instName + "[lut=$" + property + "$];\n";
+					nameLUTMap[instName] = property;
 				}
 			}
 	
@@ -194,13 +203,44 @@ bool GraphExporter::graphExport(std::string outDir, std::string filename,  torc:
 								iName + ":" + portref->getName();
 							
 							if(fp){
+							/*
 								if(simpName[iName] == "")
 									iName = getSimpleName(iName, iPrim); 
 								else
 									iName = simpName[iName];
+									*/
 
 								dotGraph = "\t" + instName+ ":" +ref->getName() + " -> " + 
 									iName + ":" + portref->getName();
+
+							Vertex* source;
+							if(nameIDMap.find(instName) == nameIDMap.end()){
+								source = new Vertex(lastVID, instPrimitive, instName);
+								nameIDMap[instName] = source;
+								ckt->addVertex(source);
+
+								lastVID++;
+							}
+							else source = nameIDMap[instName];
+							
+							
+							Vertex* sink;
+							if(nameIDMap.find(iName) == nameIDMap.end()){
+								sink = new Vertex(lastVID, iPrim, iName);
+								nameIDMap[iName] = sink;
+								ckt->addVertex(sink);
+
+								lastVID++;
+							}
+							else sink = nameIDMap[iName];
+
+							//Source connections
+							source->addOutput(sink, ref->getName());
+
+							//Sink Connection
+							sink->addInput(source);
+							sink->addInPort(portref->getName());
+
 							}
 
 							//Check to see if edge already exists
@@ -229,6 +269,7 @@ bool GraphExporter::graphExport(std::string outDir, std::string filename,  torc:
 				}
 			}
 
+
 			graphOutput = "{" +  trim(graphOutput) + "}" ;
 			graphInput = "{" + trim(graphInput) + "}";
 			if(instName.length() > 15)
@@ -238,10 +279,21 @@ bool GraphExporter::graphExport(std::string outDir, std::string filename,  torc:
 				graphNode += "{" + graphInput + "|" + instPrimitive + "\\n" + instName + "|" + graphOutput + "}\"]\n"; 
 		}
 		
+		
+		std::map<std::string, std::string>::iterator iMap;
+		for(iMap = nameLUTMap.begin(); iMap != nameLUTMap.end(); iMap++){
+			nameIDMap[iMap->first]->setLUT(iMap->second);
+		}
+		
+		//ckt->print();
+		ckt->exportGraph(gFile);
+
+		
 		graph += graphNode + graphAssignment +"}";
 		//std::cout << graph << std::endl;
 
 		//Output contents to file
+		/*
 		if(mStream.is_open()){
 			mStream << graph;
 			mStream.close();
@@ -251,9 +303,10 @@ bool GraphExporter::graphExport(std::string outDir, std::string filename,  torc:
 				system(command.c_str());
 			}
 			else{
-				std::cout<<"[E2G] -- OUTPUT FILE: "<<oFile<<std::endl;
+			//	std::cout<<"[E2G] -- OUTPUT FILE: "<<oFile<<std::endl;
 			}
 		}
+		*/
 		
 		}
 
@@ -330,22 +383,38 @@ std::string GraphExporter::getPorts(View* view){
 	//Go through each port of the cell and determine if it's input or output
 	for (unsigned int l = 0; l < vPort.size(); l++) {
 		Port* port = vPort.at(l).get();
-		std::vector<torc::generic::NetSharedPtr> connectedNet;
-		port->getConnectedNets(connectedNet);
 		PortDirection pdirect = port->getDirection();
 
+		printf("PORT NAME: %s - \n", port->getName().c_str());
 		bool isOutput = false;
 		//Get the Port Names for the graph nodes. 	
 		if(pdirect == ePortDirectionOut){
 			graphOutput += "<" + port->getName() + "> " + port->getName() + "|";
 			isOutput = true;
+			printf("output\n");
 		}
 		else if (pdirect == ePortDirectionIn){
 			graphInput += "<" + port->getName() + "> " + port->getName() + "|";
 			//std::cout<<"GRAPH INPUT NAME: "<<graphInput<<std::endl;
+			printf("input\n");
 		}
 		else
 			printf(" * Unknown Port Direction\n");
+				
+				
+				CompositionType compType = port->getCompositionType();
+				std::vector<torc::generic::NetSharedPtr> connectedNet;
+				if(compType == eCompositionTypeVector){
+					printf("VECTOR PORT\n");
+					//VectorPortReference* vectorPort = (VectorPortReference*)(&*port);
+					//vectorPort->getConectedNets(connectedNet);
+				}
+				else{
+					printf("Single PORT\n");
+					printf("\tNAME: %s\n", port->getName().c_str());
+					port->getConnectedNets(connectedNet);
+				}
+				printf("\n\n");
 
 
 		std::list<std::string> prevNet;
@@ -364,13 +433,15 @@ std::string GraphExporter::getPorts(View* view){
 
 			//Find the port that is connected to the instance
 			for(unsigned q = 0; q < refTemp.size(); q++){
+
+				PortReference* portref = refTemp.at(q).get();
+				
 				//Output only has one input
 				if(isOutput){
-					if(portRef->getName() == port->getName())
+					if(portref->getName() == port->getName())
 						continue;
 				}
 
-				PortReference* portref = refTemp.at(q).get();
 				CompositionType comType = portref->getCompositionType();
 				std::string iName = "";
 				PortDirection portDirection;
@@ -388,18 +459,19 @@ std::string GraphExporter::getPorts(View* view){
 
 				//Check to see if the direction is output to input. If so, assign a edge
 				//Used to prevent multiple edges between same nodes. (SINGLE DIRECTION)
-				if ((isOutput && ( portDirection == ePortDirectionOut)) || (!isOutput && (portDirection == ePortDirectionIn))){
+				if ((!isOutput && (portDirection == ePortDirectionIn))){
 					std::string dotGraph = "";	
-					
+
+/*
 					if(fp){
 						if(simpName[iName] == "")
 							iName = getSimpleName(iName, iPrim); 
 						else
 							iName = simpName[iName];
 					}
+					*/
 
 					//Depending on Input or output, arrange nodes. 
-					if(portDirection == ePortDirectionIn){
 						std::string portInName;
 						if(fp){
 							
@@ -411,16 +483,49 @@ std::string GraphExporter::getPorts(View* view){
 							dotGraph = "\t" + portInName +  ":O -> " + 
 								iName + ":" + portref->getName();
 
+							Vertex* source;
+							if(nameIDMap.find(port->getName()) == nameIDMap.end()){
+								source = new Vertex(lastVID, "IN", port->getName());
+								nameIDMap[port->getName()] = source;
+								ckt->addVertex(source);
+								ckt->addInput(port->getName(), lastVID);
+
+								lastVID++;
+							}
+							else source = nameIDMap[port->getName()];
+							
+							
+							Vertex* sink;
+							if(nameIDMap.find(iName) == nameIDMap.end()){
+								sink = new Vertex(lastVID, iPrim, iName);
+								nameIDMap[iName] = sink;
+								ckt->addVertex(sink);
+
+								lastVID++;
+							}
+							else sink = nameIDMap[iName];
+
+							//Source connections
+							source->addOutput(sink, "O");
+
+							//Sink Connection
+							sink->addInput(source);
+							sink->addInPort(portref->getName());
+
 						}
 						else{
 							portInName = port->getName();
 							dotGraph = "\t" + portInName + " -> " + 
 								iName + ":" + portref->getName();
 						}
-					}
-					else
+						
+					
+
+				}
+				else if ((isOutput && (portDirection == ePortDirectionOut))){
 						//Skip output ports (FEEDBACK LOOP)
 						if(fp){
+							/*
 							//TODO: Have output as an actual node
 							std::string portOutName;
 							//dotGraph = "\t" + iName + ":" + portref->getName() + " -> " + port->getName();
@@ -432,40 +537,29 @@ std::string GraphExporter::getPorts(View* view){
 							dotGraph = "\t" + iName + ":" + portref->getName() + " -> "  + 
 								portOutName + ":I";
 								//continue;
+								*/
+							//std::cout<<"OUTPUT! NAME: "<<iName<<std::endl;
+							Vertex* source;
+							if(nameIDMap.find(iName) == nameIDMap.end()){
+								source = new Vertex(lastVID, iPrim, iName);
+								nameIDMap[iName] = source;
+								ckt->addVertex(source);
+								ckt->addOutput(port->getName(), lastVID);
+
+								lastVID++;
+							}	
+							else{
+								ckt->addOutput(port->getName(), nameIDMap[iName]->getID());
+							}
 						}
-						else
-							dotGraph = "\t" + iName + ":" + portref->getName() + "->" + port->getName();
-						
-					
-
-					//Check to see if edge already exists
-					bool isPrev = false;
-					for(std::list<std::string>::iterator it = prevNet.begin(); it != prevNet.end(); ++it){
-						if(*it == dotGraph){
-							isPrev = true;
-							break;
-						}
-					}
-
-					//Break if edge exists
-					if(isPrev)
-						break;
-					else
-						prevNet.push_back(dotGraph);
-					
-							
-					if(netLength != "")
-						graphAssignment += dotGraph + "[color=blue, label=\"" + netLength+ "\", style=bold]\n";
-					else{
-
-						graphAssignment += dotGraph + "\n";
-					}
-				}
+						//jJelse
+							//dotGraph = "\t" + iName + ":" + portref->getName() + "->" + port->getName();
 			
+				}
 			}
-
 		}
 	}
+	//ckt->print();
 	return graphAssignment;
 }
 

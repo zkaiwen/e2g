@@ -30,6 +30,8 @@
 #include "torc/generic/om/ObjectFactory.hpp"
 #include <boost/lexical_cast.hpp>
 #include <boost/shared_ptr.hpp>
+#include "graph.hpp" 
+#include "vertex.hpp" 
 
 
 namespace torc { namespace generic { class Root; }  }
@@ -120,6 +122,13 @@ class GraphExporter {
 		bool fp;
 		std::map<std::string,int> gates;
 		std::map<std::string,int> level;
+
+		std::map<std::string, Vertex*> nameIDMap;
+		int lastVID; 
+
+		std::map<std::string, std::string> nameLUTMap;
+
+		Graph* ckt;
 		
 	};
 

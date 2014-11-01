@@ -24,9 +24,9 @@ void test(torc::generic::RootSharedPtr &rootPtr);
 void test2(torc::generic::RootSharedPtr &rootPtr);
 
 int main(int argc, char* argv[]) {
-	if(argc < 2 || argc > 3){
+	if( argc !=  4){
 	std::cout<<"\n##################################################################\n"<<std::endl;
-		printf("INVALID ARGUMENTS: ./e2g <fpgenius -fp OPTION> <EDIF FILE>\n");
+		printf("INVALID ARGUMENTS: ./e2g <fpgenius -fp OPTION> <EDIF FILE> <Output DIR>\n");
 			
 		std::cout<<"\n##################################################################\n"<<std::endl;
 		return 0 ;
@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
 		RootSharedPtr rootPtr = importer.getRootPtr();
 
 		//Export design by passing rootPtr of the imported EDIF File
-		gExport->graphExport(dir, filename, rootPtr);
+		gExport->graphExport(argv[3], filename, rootPtr);
 	}
 	catch(exception& e){
 		cout<<"[E2G] -- EXCEPTION ON MAIN"<<endl;
