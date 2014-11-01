@@ -37,7 +37,7 @@ class Graph
 		std::vector<int> m_Constants;                //Constants of circuit
 		
 		//function, node
-		std::map<unsigned long, int> m_Luts;         //LUTs of circuits
+		std::map<unsigned long long, int> m_Luts;         //LUTs of circuits
 
 		//node, name
 		std::map<int, std::string> m_NodeName;       //Name of node
@@ -70,7 +70,9 @@ class Graph
 		Vertex* getVertex(int);
 		void getNumType(std::map<std::string, std::vector<Vertex*> >&);
 		void getInputs(std::vector<int>&);
+		void getInputs(std::map<std::string, int>&);
 		void getOutputs(std::vector<int>&);
+		void getOutputs(std::map<std::string, int>&);
 		unsigned int getNumVertex();
 		unsigned int getNumInputs();
 		unsigned int getNumOutputs();
@@ -78,13 +80,14 @@ class Graph
 		int getLast();
 		unsigned int getMaxLevel();
 		std::string getName();
-		void getLUTs(std::map<unsigned long, int>&);
+		void getLUTs(std::map<unsigned long long, int>&);
 		int getNumNets();
 		std::string getNodeName(unsigned int);
 
 		//Boolean
 		bool hasLUTs();
 		bool isOutput(std::string);
+		std::string isOutput(int); //returns portname, else returns ""
 
 
 		//Setters
@@ -92,6 +95,7 @@ class Graph
 		void setLevels();
 		void resetLevels();
 		void removeCycles();
+		void setOutput(std::string, int);
 
 
 		//Finders
@@ -114,6 +118,7 @@ class Graph
 		unsigned substitute(int, Graph*);  //returns output node
 		void subLUT(int, Graph*);
 		void renumber(int);
+		void renameNodes(std::string);
 
 
 		//Search 

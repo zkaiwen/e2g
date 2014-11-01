@@ -92,7 +92,7 @@ Graph::Graph(const Graph& copy){
 		m_Constants.push_back(copy.m_Constants[i]);
 	}
 
-	std::map<unsigned long, int>::const_iterator itlut;
+	std::map<unsigned long long, int>::const_iterator itlut;
 	for(itlut = copy.m_Luts.begin(); itlut != copy.m_Luts.end(); itlut++){
 		m_Luts[itlut->first] = itlut->second;
 	}
@@ -175,7 +175,7 @@ Graph& Graph::operator=(const Graph& copy){
 		m_Constants.push_back(copy.m_Constants[i]);
 	}
 
-	std::map<unsigned long, int>::const_iterator itlut;
+	std::map<unsigned long long, int>::const_iterator itlut;
 	for(itlut = copy.m_Luts.begin(); itlut != copy.m_Luts.end(); itlut++){
 		m_Luts[itlut->first] = itlut->second;
 	}
@@ -408,10 +408,8 @@ bool Graph::importGraph(std::string fileName, int offset){
 		//printf("VID: %d\n", vID);
 
 		inFile >> type;
-		if(type!= "VCC" && type != "GND"){
-			inFile >> name;
-			m_NodeName[vID] = name;
-		}
+		inFile >> name;
+		m_NodeName[vID] = name;
 
 
 
@@ -456,8 +454,6 @@ bool Graph::importGraph(std::string fileName, int offset){
 
 		inFile >> fanout;
 
-		if(fanout == 0)
-			m_Outputs[name] = vID;
 
 		for(int j = 0; j < fanout; j++){
 			int output;
@@ -565,7 +561,7 @@ bool Graph::exportGraph(std::string filename){
 		}
 
 		if(it->second->getType().find("LUT") != std::string::npos){
-			//printf("%lx", it->second->getLUT());	
+			//printf("%llx", it->second->getLUT());	
 			ofs<<std::hex<<it->second->getLUT()<<std::dec;
 		}
 		ofs<<"\n";
@@ -851,6 +847,10 @@ void Graph::getInputs(std::vector<int>& input){
 	}
 }
 
+void Graph::getInputs(std::map<std::string, int>& input){
+	input = m_Inputs;
+}
+
 
 
 /***************************************************************************
@@ -869,6 +869,9 @@ void Graph::getOutputs(std::vector<int>& output){
 	}
 }
 
+void Graph::getOutputs(std::map<std::string, int>& output){
+	output = m_Outputs;
+}
 
 
 /***************************************************************************
@@ -936,7 +939,7 @@ std::string Graph::getNodeName(unsigned int node){
 
 
 
-void Graph::getLUTs(std::map<unsigned long, int>& lut){
+void Graph::getLUTs(std::map<unsigned long long, int>& lut){
 	lut = m_Luts;
 }
 
@@ -955,6 +958,20 @@ bool Graph::isOutput(std::string nodeName){
 	if(m_Outputs.find(nodeName) == m_Outputs.end())
 		return false;
 	else return true;
+}
+
+std::string Graph::isOutput(int nodeID){
+	std::map<std::string, int>::iterator it; 
+	for(it = m_Outputs.begin(); it != m_Outputs.end(); it++){
+		if(it->second == nodeID)
+			return it->first;
+	}
+	
+	return "";
+}
+
+void Graph::setOutput(std::string nodeName, int nodeID){
+	m_Outputs[nodeName] = nodeID;
 }
 
 
@@ -1114,21 +1131,19 @@ void Graph::print(){
 		printf("\n");
 		}*/
 	std::map<std::string, int>::iterator it2;
-	printf("Inputs:\n");	
+	printf("Inputs:\tSIZE:%d\n", (int)m_Inputs.size());	
 	for(it2 = m_Inputs.begin(); it2 != m_Inputs.end(); it2++){
 		printf("%s:%d   ", it2->first.c_str(), it2->second);
 	}
 
 
-	printf("\nOutputs:\n");	
+	printf("\nOutputs:\tSIZE:%d\n", (int)m_Outputs.size());	
 	for(it2 = m_Outputs.begin(); it2 != m_Outputs.end(); it2++){
 		printf("%s:%d   ", it2->first.c_str(), it2->second);
 	}
 	printf("\n");
 
 	for(it = m_GraphV.begin(); it != m_GraphV.end(); it++){
-		if(it->first > 9000)
-			break;
 		printf("V%d\t", it->first);
 		printf("L:%d\t", it->second->getLevel());
 		printf("T: %s\t", it->second->getType().c_str());
@@ -1148,7 +1163,7 @@ void Graph::print(){
 			printf("%d ", out[i]->getID());
 
 		if(it->second->getType().find("LUT") != std::string::npos){
-			printf("FUNC: %lx", it->second->getLUT());	
+			printf("FUNC: %llx", it->second->getLUT());	
 		}
 
 		printf("\n");
@@ -1164,9 +1179,22 @@ void Graph::print(){
  *    Prints contents of the Graph in G format
  ****************************************************************************/
 void Graph::printg(){
+	std::map<std::string, int>::iterator it2;
+	printf("Inputs:\tSIZE:%d\n", (int)m_Inputs.size());	
+	for(it2 = m_Inputs.begin(); it2 != m_Inputs.end(); it2++){
+		printf("%s:%d   ", it2->first.c_str(), it2->second);
+	}
+
+
+	printf("\nOutputs:\tSIZE:%d\n", (int)m_Outputs.size());	
+	for(it2 = m_Outputs.begin(); it2 != m_Outputs.end(); it2++){
+		printf("%s:%d   ", it2->first.c_str(), it2->second);
+	}
+	printf("\n");
+
 	std::map<int, Vertex*>::iterator it;
 	for(it = m_GraphV.begin(); it != m_GraphV.end(); it++){
-		printf("%d %s ", it->first, it->second->getType().c_str());
+		printf("%d %s %s", it->first, it->second->getType().c_str(), it->second->getName().c_str());
 		std::vector<Vertex*> in;
 		std::vector<std::string> port;
 		it->second->getInput(in);
@@ -1245,6 +1273,7 @@ int Graph::findInPort(std::string portname){
 		return m_Inputs[portname];
 	else{
 		printf("[ERROR] -- (graph.findInPort)\n");
+		printg();
 		printf("-- Finding Input Port Name %s\n", portname.c_str());
 		std::map<std::string, int>::iterator it;
 		for(it=m_Inputs.begin(); it!=m_Inputs.end(); it++)
@@ -1518,6 +1547,13 @@ void Graph::addConstant( int node){
 }
 
 
+void Graph::renameNodes(std::string name){
+	std::map<int, Vertex*>::iterator it;
+	for(it = m_GraphV.begin(); it != m_GraphV.end(); it++)
+		it->second->setName(name);
+}
+
+
 
 /***************************************************************************
  *  substitute 
@@ -1529,6 +1565,8 @@ void Graph::addConstant( int node){
  ****************************************************************************/
 unsigned Graph::substitute(int node, Graph* sub){
 	//printf("SUBSTITUTION! NODE: %d\n", node);
+	Vertex* nodeV = m_GraphV[node];
+	sub->renameNodes(nodeV->getName());
 	std::map<int, Vertex*>::iterator it; 
 
 
@@ -1538,6 +1576,7 @@ unsigned Graph::substitute(int node, Graph* sub){
 	sub->getInputs(subInputs);
 	sub->getOutputs(subOutputs);
 	assert(subOutputs.size() == 1);
+	int subOutNode = subOutputs[0];
 
 
 	//Get IO of the substituting node
@@ -1545,9 +1584,9 @@ unsigned Graph::substitute(int node, Graph* sub){
 	std::vector<Vertex*> nodeOutputs;
 	std::vector<std::string> nodeInputPorts;
 
-	m_GraphV[node]->getInput(nodeInputs);
-	m_GraphV[node]->getInPorts(nodeInputPorts);
-	m_GraphV[node]->getOutput(nodeOutputs);
+	nodeV->getInput(nodeInputs);
+	nodeV->getInPorts(nodeInputPorts);
+	nodeV->getOutput(nodeOutputs);
 
 
 
@@ -1562,9 +1601,7 @@ unsigned Graph::substitute(int node, Graph* sub){
 	for(unsigned int i = 0; i < nodeInputs.size(); i++){
 
 		//Remove node from the output of its inputs
-		printf("REMOVING\n");
 		std::string outPortName = nodeInputs[i]->removeOutputValue(node);
-		printf("MADE IT\n");
 
 		//Get the portname of input to match to sub
 		std::string inPortName = nodeInputPorts[i];
@@ -1613,12 +1650,12 @@ unsigned Graph::substitute(int node, Graph* sub){
 
 
 	std::vector<std::string> outPortNames;
-	m_GraphV[node]->getOutputPorts(outPortNames);
+	nodeV->getOutputPorts(outPortNames);
 
 	for(unsigned int i = 0; i < outPortNames.size(); i++){
 		//printf("Outport of node: %s\n", outPortNames[i].c_str());
 		std::vector<Vertex*> outputs;
-		m_GraphV[node]->getPortOutput(outPortNames[i], outputs);
+		nodeV->getPortOutput(outPortNames[i], outputs);
 
 		int subOutputIndex = sub->findOutPort(outPortNames[i]);
 		//printf("Index of output of prim %d\n", subOutputIndex);
@@ -1646,6 +1683,10 @@ unsigned Graph::substitute(int node, Graph* sub){
 			it->second = NULL; //Make sure delete sub does not delete content
 		}
 	}
+
+	std::string outPort = isOutput(node);
+	if(outPort != "")
+		setOutput(outPort, subOutNode);
 
 	delete sub;
 	//printf("SUBSTITUTION COMPLETE\n");
