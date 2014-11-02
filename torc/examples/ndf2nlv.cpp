@@ -23,7 +23,7 @@ using namespace torc::generic;
 
 bool translate(std::string name, std::string outDir, RootSharedPtr &rootPtr);
 void exportCell(std::string outDir, Cell* module);
-std::string writetoNLV(std::string filePath);
+void writetoNLV(std::string filePath);
 Graph* ckt;
 
 int main(int argc, char* argv[]) {
@@ -395,11 +395,11 @@ void exportCell(std::string filepath, Cell* module){
 
 
 
-std::string writetoNLV(std::string filePath){
+void writetoNLV(std::string filePath){
 	std::string nlv = "";
 
 	//Module name
-	nlv += "module new " + graph->getName() "\n\n";
+	nlv += "module new " + ckt->getName() + "\n\n";
 
 	//Get the ports
 	std::map<std::string, int> input;
@@ -430,7 +430,7 @@ std::string writetoNLV(std::string filePath){
 
 		for(iOut = out.begin(); iOut != out.end(); iOut++){
 			net+= "load net " + it->second->getName() + " ";
-			if(it->getType() == "IN") 
+			if(it->second->getType() == "IN") 
 				net+= "-port " + it->second->getName() + " " ;
 			else{
 				net+= "-pin ";
@@ -443,7 +443,7 @@ std::string writetoNLV(std::string filePath){
 				std::string onode = ckt->findOutPortName(iOut->second[i]->getID());
 				if(onode == ""){
 					net+= "-pin ";
-					net+= iOut->second[i]->getName() + " " + iOut->second[i]->getInputPortName(it->getID());
+					net+= iOut->second[i]->getName() + " " + iOut->second[i]->getInputPortName(it->first);
 				}
 				else{
 					net+= "-port " + onode + " " ;
@@ -460,6 +460,7 @@ std::string writetoNLV(std::string filePath){
 	std::ofstream ofs(filePath.c_str(), std::ofstream::out);
 	ofs<<nlv;
 	ofs.close();
+
 }
 
 
