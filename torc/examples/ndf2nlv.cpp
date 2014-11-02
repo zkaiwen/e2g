@@ -422,19 +422,19 @@ std::string writetoNLV(std::string filePath){
 	
 	std::map<int, Vertex*>::const_iterator it;
 	for(it = ckt->begin(); it != ckt->end; it++){
-		inst += "load inst " + it->getName() + " " + it->getType() + "v1\n"
+		inst += "load inst " + it->second->getName() + " " + it->second->getType() + "v1\n";
 			
 		std::map<std::string, std::vector<Vertex*> > out;
 		std::map<std::string, std::vector<Vertex*> >::iterator iOut;
-		it->getOutput(out);
+		it->second->getOutput(out);
 
 		for(iOut = out.begin(); iOut != out.end(); iOut++){
-			net+= "load net " + it->getName() + " ";
+			net+= "load net " + it->second->getName() + " ";
 			if(it->getType() == "IN") 
-				net+= "-port " + it->getName() + " " ;
+				net+= "-port " + it->second->getName() + " " ;
 			else{
 				net+= "-pin ";
-				net+= it->getName() + " " + iOut->first + " " ;
+				net+= it->second->getName() + " " + iOut->first + " " ;
 			}
 
 			net+="\\\n\t";
