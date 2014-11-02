@@ -66,7 +66,7 @@ TEST_OBJECTS = \
 
 # make everything
 
-all: e2v e2g ndf2cnl
+all: e2v e2g ndf2cnl ndf2nlv
 
 
 
@@ -91,6 +91,14 @@ ndf2cnl: torc
 	$(CC) \
 				$(REAL_OBJECTS) \
 				torc/examples/ndf2cnl.o \
+				$(LDFLAGS) \
+				-o $@ \
+				$
+
+ndf2nlv: torc 
+	$(CC) \
+				$(REAL_OBJECTS) \
+				torc/examples/ndf2nlv.o \
 				$(LDFLAGS) \
 				-o $@ \
 				$
