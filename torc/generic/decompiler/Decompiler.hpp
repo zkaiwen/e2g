@@ -4,6 +4,7 @@
 #define TORC_GENERIC_DECOMPILER_HPP
 
 #include <iostream>
+#include <stdint.h>
 
 #include "torc/generic/om/PointerTypes.hpp"
 #include "torc/generic/util/Error.hpp"

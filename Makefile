@@ -106,3 +106,4 @@ clean:
 	rm -f $(OBJS)
 	rm -f e2v
 	rm -f e2g 
+	rm ndf2*

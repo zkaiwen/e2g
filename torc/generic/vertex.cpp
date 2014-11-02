@@ -71,7 +71,7 @@ void Vertex::setLevel(int level){
 
 void Vertex::setLUT(std::string func){
 	m_LUT = 0;
-	unsigned long base = 1;
+	unsigned long long base = 1;
 	//Convert function string into an integer
 	for(int i = func.size()-1; i >= 0; i--){
 		if( func[i] <= '9'){
@@ -88,11 +88,11 @@ void Vertex::setLUT(std::string func){
 }
 
 
-void Vertex::setLUT(unsigned long lut){
+void Vertex::setLUT(unsigned long long lut){
 	m_LUT = lut;
 }
 
-unsigned long Vertex::getLUT(){
+unsigned long long Vertex::getLUT(){
 	return m_LUT;
 }
 
@@ -175,6 +175,9 @@ void Vertex::getOutput(std::vector<Vertex*> &v){
 		for(unsigned int i = 0; i < it->second.size(); i++)
 			v.push_back(it->second[i]);
 	}
+}
+void Vertex::getOutput(std::map<std::string, std::vector<Vertex*> >& output){
+	output = m_Output;
 }
 
 void Vertex::getInput(std::vector<Vertex*> &v){

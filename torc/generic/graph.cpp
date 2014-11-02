@@ -1352,10 +1352,8 @@ std::string Graph::findOutPortName(int port){
 		if(it->second == port)
 			return it->first;
 	}
-
-	printf("Port ID:%d is not an input to the circuit\n", port);
-	printg();
-	exit(1);
+	
+	return "";
 
 }
 
