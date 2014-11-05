@@ -1531,6 +1531,13 @@ void Graph::addOutput(std::string portName, int node){
 	m_Outputs[portName] = node;
 }
 
+void Graph::addOutput(std::string sourceName, std::string portName,  int node){
+	if(m_Outputs.find(portName) != m_Outputs.end())
+		m_Outputs.erase(portName);
+
+	m_Outputs[sourceName + ":" + portName] = node;
+}
+
 
 
 /***************************************************************************

@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
 
 		std::string fileName = argv[1];
 		std::string outDir= argv[2];
-		
+
 
 		std::cout<<"[NDF2CNL] -- EDIF FILE: "<<fileName<<endl;
 
@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
 		EdifImporter importer(factoryPtr);
 		importer(fileStream, fileName);
 		RootSharedPtr rootPtr = importer.getRootPtr();
-		
+
 		//Grab File Name
 		size_t startPos = fileName.find_last_of('/')+1;
 		size_t endPos = fileName.find_last_of('.');
@@ -76,7 +76,7 @@ bool translate(std::string name, std::string outDir, torc::generic::RootSharedPt
 	//printf("[Translate] -- Translating EDIF File...\n");
 	//Initial Declarations
 	std::vector<torc::generic::LibrarySharedPtr, std::allocator<LibrarySharedPtr> > vLibrary;
-	
+
 	try {
 		//Get Current Design
 		std::vector<DesignSharedPtr> designList;
@@ -89,7 +89,7 @@ bool translate(std::string name, std::string outDir, torc::generic::RootSharedPt
 		//Get the library
 		Design* topDesign = designList.at(0).get();
 		Library* library = rootPtr->findLibrary(topDesign->getLibraryRefName()).get();
-		
+
 
 		//Get the cells in the library
 		std::vector<torc::generic::CellSharedPtr> cells;
@@ -99,7 +99,7 @@ bool translate(std::string name, std::string outDir, torc::generic::RootSharedPt
 		for(unsigned int i = 0; i < cells.size(); i++){
 			//Get the top cell
 			Cell* cell = cells[i].get();
-	
+
 			//Check to see if there are any instances
 			std::vector<torc::generic::ViewSharedPtr> vViews;
 			std::vector<torc::generic::InstanceSharedPtr> instances;
@@ -119,7 +119,7 @@ bool translate(std::string name, std::string outDir, torc::generic::RootSharedPt
 				filepath += outDir + name;
 
 			filepath+= ".cnl";
-		
+
 			//export each cell
 			ckt = new Graph(filepath);
 			exportCell(filepath, cell);
@@ -140,139 +140,139 @@ bool translate(std::string name, std::string outDir, torc::generic::RootSharedPt
 
 
 void exportCell(std::string filepath, Cell* module){
-		std::cout<<"[NDF2CNL] -- Exporting Cell: "<<filepath<<"\n";
-		std::vector<torc::generic::ViewSharedPtr> vViews;
-		module->getViews(vViews);
-		View* view = vViews.at(0).get();
-	
+	std::cout<<"[NDF2CNL] -- Exporting Cell: "<<filepath<<"\n";
+	std::vector<torc::generic::ViewSharedPtr> vViews;
+	module->getViews(vViews);
+	View* view = vViews.at(0).get();
 
-		//Get instances ports and nets
-		std::vector<torc::generic::InstanceSharedPtr> instances;
-		std::vector<torc::generic::PortSharedPtr> ports;
-		std::vector<torc::generic::NetSharedPtr> nets;
-		view->getInstances(instances);
-		view->getPorts(ports);
-		view->getNets(nets);
 
-		//Name, VID
-		std::map<std::string, Vertex*> nameVertexMap;
-		std::map<std::string, Vertex*>::iterator iNVM;
+	//Get instances ports and nets
+	std::vector<torc::generic::InstanceSharedPtr> instances;
+	std::vector<torc::generic::PortSharedPtr> ports;
+	std::vector<torc::generic::NetSharedPtr> nets;
+	view->getInstances(instances);
+	view->getPorts(ports);
+	view->getNets(nets);
 
-		//Instance name, LUT function
-		std::map<std::string, std::string> instanceLUTMap;
+	//Name, VID
+	std::map<std::string, Vertex*> nameVertexMap;
+	std::map<std::string, Vertex*>::iterator iNVM;
 
-		/*********************************
-		
+	//Instance name, LUT function
+	std::map<std::string, std::string> instanceLUTMap;
+
+	/*********************************
+
 		Parsing ports to the module
 
-		***********************************/
-		int lastVID = 0;
-		for (unsigned int i = 0; i < ports.size(); i++) {
-			Port* port = ports[i].get();
-				CompositionType comType = port->getCompositionType();
-				
-				if(comType == eCompositionTypeVector){
-					//printf("PORT IS VECTOR\n");
-					continue;
-				}
+	 ***********************************/
+	int lastVID = 0;
+	for (unsigned int i = 0; i < ports.size(); i++) {
+		Port* port = ports[i].get();
+		CompositionType comType = port->getCompositionType();
 
-			if(port->getDirection() == ePortDirectionIn){
-				//std::cout<<"DIR: Input \tID: "<<lastVID<<"\tPort: "<<port->getName()<<"\n";
-
-							Vertex* source;
-								source = new Vertex(lastVID, "IN", port->getName());
-								nameVertexMap[port->getName()] = source;
-								ckt->addVertex(source);
-								ckt->addInput(port->getName(), lastVID);
-
-								lastVID++;
-			}
-			else if(port->getDirection() == ePortDirectionOut){
-				//std::cout<<"DIR: Output\tPort:  "<< port->getName()<< "\n";
-				ckt->addOutput(port->getName(), -1);
-			}
+		if(comType == eCompositionTypeVector){
+			//printf("PORT IS VECTOR\n");
+			continue;
 		}
 
+		if(port->getDirection() == ePortDirectionIn){
+			//std::cout<<"DIR: Input \tID: "<<lastVID<<"\tPort: "<<port->getName()<<"\n";
 
- 		/*********************************
-		
-		Parsing Instances to the module
+			Vertex* source;
+			source = new Vertex(lastVID, "IN", port->getName());
+			nameVertexMap[port->getName()] = source;
+			ckt->addVertex(source);
+			ckt->addInput(port->getName(), lastVID);
 
-		***********************************/
-		for (unsigned int i = 0; i < instances.size(); i++) {
-			Instance* instance= instances[i].get();
-			std::string type = instance->getMaster()->getParent()->getName();
-			std::string name = instance->getName();
-			//std::cout<<"VID:"<<lastVID<<"\tInstance: "<< name << "\tType: "<< type <<"\n";
-
-				Vertex* source;
-					source = new Vertex(lastVID, type, name);
-					nameVertexMap[name] = source;
-					ckt->addVertex(source);
-
-			
-			//Record the function of the LUT
-			if(type.find("LUT") != std::string::npos){
-				PropertySharedPtr property= instance->getProperty("INIT");
-	
-					std::string lutFunction = property->getValue().get<Value::String>();
-					source->setLUT(lutFunction);
-			}
-			
 			lastVID++;
 		}
-		//printf("CKT SIZE: %d\n", ckt->getNumVertex());
-		
-		/*********************************
-		
+		else if(port->getDirection() == ePortDirectionOut){
+			//std::cout<<"DIR: Output\tPort:  "<< port->getName()<< "\n";
+			ckt->addOutput(port->getName(), -1);
+		}
+	}
+
+
+	/*********************************
+
+		Parsing Instances to the module
+
+	 ***********************************/
+	for (unsigned int i = 0; i < instances.size(); i++) {
+		Instance* instance= instances[i].get();
+		std::string type = instance->getMaster()->getParent()->getName();
+		std::string name = instance->getName();
+		//std::cout<<"VID:"<<lastVID<<"\tInstance: "<< name << "\tType: "<< type <<"\n";
+
+		Vertex* source;
+		source = new Vertex(lastVID, type, name);
+		nameVertexMap[name] = source;
+		ckt->addVertex(source);
+
+
+		//Record the function of the LUT
+		if(type.find("LUT") != std::string::npos){
+			PropertySharedPtr property= instance->getProperty("INIT");
+
+			std::string lutFunction = property->getValue().get<Value::String>();
+			source->setLUT(lutFunction);
+		}
+
+		lastVID++;
+	}
+	//printf("CKT SIZE: %d\n", ckt->getNumVertex());
+
+	/*********************************
+
 		Parsing Nets to the module
 
-		***********************************/
-		std::map<std::string, int> vectorPortCountMap;
-		for (unsigned int i = 0; i < nets.size(); i++) {
+	 ***********************************/
+	std::map<std::string, int> vectorPortCountMap;
+	for (unsigned int i = 0; i < nets.size(); i++) {
 
-			Net* net= nets[i].get();
-			std::string name = net->getName();
-			//jstd::cout<<"\n\nNET: "<<name<<std::endl;
-			
-			std::vector<torc::generic::PortReferenceSharedPtr> portRefs;
-			std::vector<torc::generic::PortSharedPtr> netports;
-			net->getConnectedPortRefs(portRefs);
-			net->getConnectedPorts(netports);
-					
-			if(portRefs.size() + netports.size() < 2){
-				continue;
-			}
+		Net* net= nets[i].get();
+		std::string name = net->getName();
+		//jstd::cout<<"\n\nNET: "<<name<<std::endl;
 
-			/*********************************
-		
+		std::vector<torc::generic::PortReferenceSharedPtr> portRefs;
+		std::vector<torc::generic::PortSharedPtr> netports;
+		net->getConnectedPortRefs(portRefs);
+		net->getConnectedPorts(netports);
+
+		if(portRefs.size() + netports.size() < 2){
+			continue;
+		}
+
+		/*********************************
+
 			Find Source vertex	
 
-			***********************************/
-			Vertex* source; 
-			std::string sourcePortName = "";
-			bool isSourceFound = false;
-			for(unsigned k = 0; k < portRefs.size(); k++){
-				PortReference* portref = portRefs.at(k).get();
-				//std::cout<<"\tPortRef:  "<<portref->getName()<<" Instance: "<<portref->getParent()->getName()<<"\n";
-				if(portref->getMaster()->getDirection() == ePortDirectionOut){
-					std::string instanceRef = portref->getParent()->getName();
-					source = nameVertexMap[instanceRef];
-					sourcePortName = portref->getName();
-					isSourceFound = true;
-					break;
-				}
+		 ***********************************/
+		Vertex* source; 
+		std::string sourcePortName = "";
+		bool isSourceFound = false;
+		for(unsigned k = 0; k < portRefs.size(); k++){
+			PortReference* portref = portRefs.at(k).get();
+			//std::cout<<"\tPortRef:  "<<portref->getName()<<" Instance: "<<portref->getParent()->getName()<<"\n";
+			if(portref->getMaster()->getDirection() == ePortDirectionOut){
+				std::string instanceRef = portref->getParent()->getName();
+				source = nameVertexMap[instanceRef];
+				sourcePortName = portref->getName();
+				isSourceFound = true;
+				break;
 			}
+		}
 
-			if(!isSourceFound)
+		if(!isSourceFound)
 			for(unsigned k = 0; k < netports.size(); k++){
 				Port* port = netports.at(k).get();
 				//std::cout<<"\tPort:  "<<port->getName()<<"\t"<<"DIR: "<<port->getDirection()<<"\n";
-				
+
 				CompositionType comType = port->getCompositionType();
 				std::string portName = port->getName();
 				PortDirection portDirection= port->getDirection();
-				
+
 				if(comType == eCompositionTypeVectorBit){
 					VectorPortBit* vectorPort = (VectorPortBit*)(&*port);
 					//std::cout<<"\tVPort:  "<<vectorPort->getName()<<"\t";
@@ -280,31 +280,31 @@ void exportCell(std::string filepath, Cell* module){
 
 					portName = vectorPort->getName();
 					portDirection = vectorPort->getParentCollection()->getDirection();
-				
-				if(portDirection == ePortDirectionIn){
-					int index = 0;
-					if(vectorPortCountMap.find(portName) == vectorPortCountMap.end()){
-						vectorPortCountMap[portName] = 1;
+
+					if(portDirection == ePortDirectionIn){
+						int index = 0;
+						if(vectorPortCountMap.find(portName) == vectorPortCountMap.end()){
+							vectorPortCountMap[portName] = 1;
+						}
+						else{
+							index = vectorPortCountMap[portName];
+							vectorPortCountMap[portName]++;
+						}
+						std::stringstream ss;
+						ss<<portName<<"_"<<index;
+						portName = ss.str();
+						//					printf("NEW PORT NAME: %s\n", portName.c_str());
+
+						Vertex* newInput;
+						newInput = new Vertex(lastVID, "IN", portName);
+						nameVertexMap[portName] = newInput;
+						ckt->addVertex(newInput);
+						ckt->addInput(portName, lastVID);
+						lastVID++;
 					}
-					else{
-						index = vectorPortCountMap[portName];
-						vectorPortCountMap[portName]++;
-					}
-					std::stringstream ss;
-					ss<<portName<<"_"<<index;
-					portName = ss.str();
-//					printf("NEW PORT NAME: %s\n", portName.c_str());
-							
-							Vertex* newInput;
-								newInput = new Vertex(lastVID, "IN", portName);
-								nameVertexMap[portName] = newInput;
-								ckt->addVertex(newInput);
-								ckt->addInput(portName, lastVID);
-								lastVID++;
-				}
 
 				}
-	
+
 				if(portDirection == ePortDirectionIn){
 					source = nameVertexMap[portName];
 					sourcePortName = "O";
@@ -313,57 +313,57 @@ void exportCell(std::string filepath, Cell* module){
 				}
 			}
 
-			assert(isSourceFound);
+		assert(isSourceFound);
 
 
 
 
-			/*********************************
-		
+		/*********************************
+
 			Connect source to the sinks	
 
-			***********************************/
-			for(unsigned k = 0; k < portRefs.size(); k++){
-				PortReference* portref = portRefs.at(k).get();
-				//std::cout<<"\tPortRef:  "<<portref->getName()<<" Instance: "<<portref->getParent()->getName()<<std::endl;
+		 ***********************************/
+		for(unsigned k = 0; k < portRefs.size(); k++){
+			PortReference* portref = portRefs.at(k).get();
+			//std::cout<<"\tPortRef:  "<<portref->getName()<<" Instance: "<<portref->getParent()->getName()<<std::endl;
 
-				//TODO: Check for buses. Ignore buses for now...
-				CompositionType comType = portref->getCompositionType();
-				assert(comType != eCompositionTypeVectorBit);
-				
-				std::string instanceRef = portref->getParent()->getName();
-				if(portref->getMaster()->getDirection() == ePortDirectionIn){
-					Vertex* sink = nameVertexMap[instanceRef];
-					sink->addInput(source);
-					sink->addInPort(portref->getName());
+			//TODO: Check for buses. Ignore buses for now...
+			CompositionType comType = portref->getCompositionType();
+			assert(comType != eCompositionTypeVectorBit);
 
-					source->addOutput(sink, sourcePortName);
-				}
+			std::string instanceRef = portref->getParent()->getName();
+			if(portref->getMaster()->getDirection() == ePortDirectionIn){
+				Vertex* sink = nameVertexMap[instanceRef];
+				sink->addInput(source);
+				sink->addInPort(portref->getName());
+
+				source->addOutput(sink, sourcePortName);
 			}
+		}
 
 
 
-			/*********************************
-		
+		/*********************************
+
 			Check nets connected to PORTS 
 
-			***********************************/
-			for(unsigned k = 0; k < netports.size(); k++){
-				Port* port = netports.at(k).get();
+		 ***********************************/
+		for(unsigned k = 0; k < netports.size(); k++){
+			Port* port = netports.at(k).get();
 
-				//TODO: Check for buses. Ignore buses for now...
-				CompositionType comType = port->getCompositionType();
-				std::string portName = port->getName();
-				PortDirection portDirection= port->getDirection();
+			//TODO: Check for buses. Ignore buses for now...
+			CompositionType comType = port->getCompositionType();
+			std::string portName = port->getName();
+			PortDirection portDirection= port->getDirection();
 
-				if(comType == eCompositionTypeVectorBit){
-					VectorPortBit* vectorPort = (VectorPortBit*)(&*port);
+			if(comType == eCompositionTypeVectorBit){
+				VectorPortBit* vectorPort = (VectorPortBit*)(&*port);
 				//	std::cout<<"\tVPort:  "<<vectorPort->getName()<<"\t";
 				//	std::cout<<"DIR: "<<vectorPort->getParentCollection()->getDirection()<<"\n";
 
-					portName = vectorPort->getName();
-					portDirection = vectorPort->getParentCollection()->getDirection();
-				
+				portName = vectorPort->getName();
+				portDirection = vectorPort->getParentCollection()->getDirection();
+
 				if(portDirection == ePortDirectionOut){
 					int index = 0;
 					if(vectorPortCountMap.find(portName) == vectorPortCountMap.end()){
@@ -376,19 +376,19 @@ void exportCell(std::string filepath, Cell* module){
 					std::stringstream ss;
 					ss<<portName<<"_"<<index;
 					portName = ss.str();
-				//	printf("NEW PORT NAME: %s\n", portName.c_str());
-				}
-				}
-
-				if(portDirection == ePortDirectionOut){
-					ckt->addOutput(portName, source->getID());
+					//	printf("NEW PORT NAME: %s\n", portName.c_str());
 				}
 			}
+
+			if(portDirection == ePortDirectionOut){
+				ckt->addOutput(portName, source->getID());
+			}
 		}
+	}
 
 
 
-		//fs<<"\nEND";
+	//fs<<"\nEND";
 }
 
 

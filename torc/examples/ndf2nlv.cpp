@@ -21,31 +21,33 @@
 using namespace std;
 using namespace torc::generic;
 
-bool translate(std::string name, std::string outDir, RootSharedPtr &rootPtr, std::string primFile);
-void exportCell(std::string outDir, Cell* module);
-void writetoNLV(std::string filePath, std::string primFile);
+bool translate(std::string name, std::string outDir, RootSharedPtr &rootPtr);
+void exportCell(std::string outDir, Cell* module, std::map<std::string, std::string>&);
+void writetoNLV(std::string filePath, std::map<std::string, std::string>&);
 Graph* ckt;
 
+//OutPort, port of inst connected to outport
+std::map<std::string, std::string> port2OutPortMap;
+
 int main(int argc, char* argv[]) {
-	if(argc != 4){
+	if(argc != 3){
 		std::cout<<"\n################################################################\n"<<std::endl;
-		printf("    INVALID ARGUMENTS: ./ndf2nlv <EDIF FILE> <Out DIR> <PRIM File\n");
+		printf("    INVALID ARGUMENTS: ./ndf2nlv <EDIF FILE> <Out DIR>\n");
 		std::cout<<"\n################################################################\n"<<std::endl;
 		return 0 ;
 	}	
 
 	try{
 		std::cout<<"\n============================================================================\n";
-		std::cout<<  "[*]\tBegin EDIF to Custom Netlist Translation\n";
+		std::cout<<  "[*]\tBegin EDIF to NLV translation\n";
 		std::cout<<"============================================================================\n";
 
 
 		std::string fileName = argv[1];
 		std::string outDir= argv[2];
-		std::string primFile= argv[3];
 
 
-		std::cout<<"[NDF2CNL] -- EDIF FILE: "<<fileName<<endl;
+		std::cout<<"[NDF2NLV] -- EDIF FILE: "<<fileName<<endl;
 
 		// import the EDIF design
 		fstream fileStream(fileName.c_str());
@@ -60,7 +62,7 @@ int main(int argc, char* argv[]) {
 		std::string name= fileName.substr(startPos, endPos-startPos);
 
 		//Export design by passing rootPtr of the imported EDIF File
-		translate(name, outDir, rootPtr, primFile);
+		translate(name, outDir, rootPtr);
 	}
 	catch(exception& e){
 		cout<<"[ndf2cnl] -- EXCEPTION ON MAIN"<<endl;
@@ -74,7 +76,7 @@ int main(int argc, char* argv[]) {
 
 
 
-bool translate(std::string name, std::string outDir, torc::generic::RootSharedPtr &rootPtr, std::string primFile) {
+bool translate(std::string name, std::string outDir, torc::generic::RootSharedPtr &rootPtr) {
 	//printf("[Translate] -- Translating EDIF File...\n");
 	//Initial Declarations
 	std::vector<torc::generic::LibrarySharedPtr, std::allocator<LibrarySharedPtr> > vLibrary;
@@ -97,7 +99,6 @@ bool translate(std::string name, std::string outDir, torc::generic::RootSharedPt
 		std::vector<torc::generic::CellSharedPtr> cells;
 		library->getCells(cells);
 
-		printf("[NDF2CNL] -- Possible submodules: %d\n", (int)cells.size()-1);
 		for(unsigned int i = 0; i < cells.size(); i++){
 			//Get the top cell
 			Cell* cell = cells[i].get();
@@ -124,16 +125,17 @@ bool translate(std::string name, std::string outDir, torc::generic::RootSharedPt
 
 			//export each cell
 			ckt = new Graph(name);
-			exportCell(name, cell);
-			writetoNLV(filepath, primFile);
+			std::map<std::string, std::string> primMap;
+			exportCell(name, cell, primMap);
+			writetoNLV(filepath, primMap);
 			delete ckt;
 		}
 
 
-		std::cout << "CONVERSION COMPLETE"<< std::endl;
+		std::cout << "[NDF2NLV] -- CONVERSION COMPLETE"<< std::endl;
 
 	} catch (std::exception &e) {
-		std::cout << "[NDF2CNL] -- EXCEPTION IN exportGraph\n\n" << e.what() << std::endl << std::endl;
+		std::cout << "[NDF2NLV] -- EXCEPTION IN exportGraph\n\n" << e.what() << std::endl << std::endl;
 		return false;
 	}
 
@@ -141,8 +143,8 @@ bool translate(std::string name, std::string outDir, torc::generic::RootSharedPt
 }
 
 
-void exportCell(std::string filepath, Cell* module){
-	std::cout<<"[NDF2CNL] -- Exporting Cell: "<<filepath<<"\n";
+void exportCell(std::string filepath, Cell* module, std::map<std::string, std::string>& primMap){
+	std::cout<<"[NDF2NLV] -- Exporting Cell: "<<filepath<<"\n";
 	std::vector<torc::generic::ViewSharedPtr> vViews;
 	module->getViews(vViews);
 	View* view = vViews.at(0).get();
@@ -231,6 +233,8 @@ void exportCell(std::string filepath, Cell* module){
 
 	 ***********************************/
 	std::map<std::string, int> vectorPortCountMap;
+
+	//prim, prim symbol 
 	for (unsigned int i = 0; i < nets.size(); i++) {
 
 		Net* net= nets[i].get();
@@ -256,7 +260,58 @@ void exportCell(std::string filepath, Cell* module){
 		bool isSourceFound = false;
 		for(unsigned k = 0; k < portRefs.size(); k++){
 			PortReference* portref = portRefs.at(k).get();
-			//std::cout<<"\tPortRef:  "<<portref->getName()<<" Instance: "<<portref->getParent()->getName()<<"\n";
+
+			std::string primName = portref->getParent()->getMaster()->getParent()->getName();
+			std::string primSymbol = "load symbol " + primName + " v1 ";
+			if(primName.find("MX") != std::string::npos || 
+					primName.find("MUX") != std::string::npos)
+				primSymbol+= " MUX";
+			else if(primName.find("NAND") != std::string::npos || 
+					primName.find("Nand") != std::string::npos)
+				primSymbol+= " NAND";
+			else if(primName.find("AND") != std::string::npos || 
+					primName.find("And") != std::string::npos)
+				primSymbol+= " AND";
+			else if(primName.find("NOR") != std::string::npos || 
+					primName.find("Nor") != std::string::npos)
+				primSymbol+= " NOR";
+			else if(primName.find("XOR") != std::string::npos || 
+					primName.find("Xor") != std::string::npos)
+				primSymbol+= " XOR";
+			else if(primName.find("OR") != std::string::npos || 
+					primName.find("Or") != std::string::npos)
+				primSymbol+= " OR";
+			else if(primName.find("NOT") != std::string::npos || 
+					primName.find("INV") != std::string::npos)
+				primSymbol+= " INV";
+			else if(primName.find("BUF") != std::string::npos || 
+					primName.find("Buf") != std::string::npos)
+				primSymbol+= " BUF";
+			else if(primName.find("FD") != std::string::npos || 
+					primName.find("FF") != std::string::npos ||
+					primName.find("LAT") != std::string::npos)
+				primSymbol+= " GEN";
+			else
+				primSymbol+= " BOX";
+
+
+			std::vector<torc::generic::PortSharedPtr> primPorts;
+			portref->getParent()->getMaster()->getPorts(primPorts);
+			for (unsigned int i = 0; i < primPorts.size(); i++) {
+				Port* port = primPorts[i].get();
+				CompositionType comType = port->getCompositionType();
+
+				if(comType == eCompositionTypeVector)
+					continue;
+
+				if(port->getDirection() == ePortDirectionIn)
+					primSymbol += " \\\n\tport " + port->getName() + " in.left";
+				else if(port->getDirection() == ePortDirectionOut)
+					primSymbol += " \\\n\tport " + port->getName() + " out.right";
+			}
+
+			primMap[primName] = primSymbol;
+
 			if(portref->getMaster()->getDirection() == ePortDirectionOut){
 				std::string instanceRef = portref->getParent()->getName();
 				source = nameVertexMap[instanceRef];
@@ -314,6 +369,8 @@ void exportCell(std::string filepath, Cell* module){
 					break;
 				}
 			}
+
+
 
 		assert(isSourceFound);
 
@@ -384,6 +441,7 @@ void exportCell(std::string filepath, Cell* module){
 
 			if(portDirection == ePortDirectionOut){
 				ckt->addOutput(portName, source->getID());
+				port2OutPortMap[portName] = sourcePortName;
 			}
 		}
 	}
@@ -397,27 +455,15 @@ void exportCell(std::string filepath, Cell* module){
 
 
 
-void writetoNLV(std::string filePath, std::string primFile){
+void writetoNLV(std::string filePath, std::map<std::string, std::string>& primMap){
 	std::string nlv = "";
-	std::string prim= "";
-
-	std::ifstream inFile;
-	inFile.open(primFile.c_str());
-	if (!inFile.is_open())	{
-		fprintf(stderr, "[ERROR] -- Cannot open the file %s for import...exiting\n", primFile.c_str());
-		fprintf(stderr, "\n*******************************************************************\n\n");
-		exit(-1);
-	}
-	while(!inFile.eof()){
-		std::string buffer;
-		std::getline(inFile, buffer);
-		prim+= buffer + "\n";
-	}
-
-	inFile.close();
 
 	//Module name
 	nlv += "module new " + ckt->getName() + "\n\n";
+	std::map<std::string, std::string>::iterator iMapS;
+	for(iMapS = primMap.begin(); iMapS != primMap.end(); iMapS++){
+		nlv+=iMapS->second + "\n";
+	}
 
 	//Get the ports
 	std::map<std::string, int> input;
@@ -437,31 +483,47 @@ void writetoNLV(std::string filePath, std::string primFile){
 	
 	std::map<int, Vertex*>::const_iterator it;
 	for(it = ckt->begin(); it != ckt->end(); it++){
-		if(it->second->getType() != "IN")
+		if(it->second->getType() != "IN" &&
+				it->second->getType() != "VCC" &&
+				it->second->getType() != "GND")
 			inst += "load inst " + it->second->getName() + " " + it->second->getType() + " v1\n";
 
 		std::map<std::string, std::vector<Vertex*> > out;
 		std::map<std::string, std::vector<Vertex*> >::iterator iOut;
 		it->second->getOutput(out);
 
+		//Check to see if it is connected to output Port
 		if(out.size() == 0){
-			net+= "load net " + it->second->getName() + " ";
 			std::string onode = ckt->findOutPortName(it->first);
-			if(onode != "")
+			if(onode != ""){
+				net+= "load net " + it->second->getName() + " ";
 				net+= "-port " + onode + " " ;
-			net+="\\\n\t";
+				net+="\\\n\t";
 
-			if(it->second->getType() == "IN") 
-				net+= "-port " + it->second->getName() + " " ;
-			else{
-				net+= "-pin ";
-				net+= it->second->getName() + " " + onode + " " ;
+				if(it->second->getType() == "IN") 
+					net+= "-port " + it->second->getName() + " " ;
+				else if(it->second->getType() == "VCC") 
+					net+= "-power ";
+				else if(it->second->getType() == "GND")
+					net+= "-ground ";
+				else{
+					net+= "-pin ";
+					net+= it->second->getName() + " " + port2OutPortMap[onode] + " " ;
+				}
+				net+="\n";
+				continue;
 			}
+			else
+				continue;
 		}
 
 		for(iOut = out.begin(); iOut != out.end(); iOut++){
 			net+= "load net " + it->second->getName() + " ";
-			if(it->second->getType() == "IN") 
+			if(it->second->getType() == "VCC") 
+				net+= "-power ";
+			else if(it->second->getType() == "GND")
+				net+= "-ground ";
+			else if(it->second->getType() == "IN") 
 				net+= "-port " + it->second->getName() + " " ;
 			else{
 				net+= "-pin ";
@@ -470,16 +532,14 @@ void writetoNLV(std::string filePath, std::string primFile){
 
 			net+="\\\n\t";
 
+			//Check to see if the output of this port goes to the output of the circuit
+			std::string onode = ckt->findOutPortName(it->first);
+			if(onode != "")
+				net+= "-port " + onode + " " ;
+
 			for(unsigned int i = 0; i < iOut->second.size(); i++){
-				std::string onode = ckt->findOutPortName(it->first);
-				if(onode == ""){
 					net+= "-pin ";
 					net+= iOut->second[i]->getName() + " " + iOut->second[i]->getInputPortName(it->first) + " " ;
-				}
-				else{
-					net+= "-port " + onode + " " ;
-
-				}
 			}
 			net+="\n";
 		}
@@ -488,7 +548,6 @@ void writetoNLV(std::string filePath, std::string primFile){
 
 	std::ofstream ofs(filePath.c_str(), std::ofstream::out);
 	ofs<<nlv;
-	ofs<<prim;
 	ofs<<inst;
 	ofs<<net;
 	ofs<<"\nshow\nfullfit\n";

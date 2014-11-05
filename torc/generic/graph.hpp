@@ -112,6 +112,7 @@ class Graph
 		Vertex* addVertex(int, Vertex*);
 		void addInput(std::string, int);
 		void addOutput(std::string, int);
+		void addOutput(std::string , std::string,  int);
 		void addConstant(int);
 		void removeVertex(Vertex*);
 		void removeVertex(int);
